@@ -3,15 +3,21 @@
 Python Slack Bot class for use with the pythOnBoarding app
 """
 import os
-import message
+#import message
 
 from slackclient import SlackClient
+from auth_data import AuthData
+
+import bs4
+import requests
 
 # To remember which teams have authorized your app and what tokens are
 # associated with each team, we can store this information in memory on
 # as a global object. When your bot is out of development, it's best to
 # save this in a more persistant memory store.
 authed_teams = {}
+
+auth_data = AuthData()
 
 
 class Bot(object):
@@ -22,13 +28,13 @@ class Bot(object):
         self.emoji = ":robot_face:"
         # When we instantiate a new bot object, we can access the app
         # credentials we set earlier in our local development environment.
-        self.oauth = {"client_id": os.environ.get("CLIENT_ID"),
-                      "client_secret": os.environ.get("CLIENT_SECRET"),
+        self.oauth = {"client_id": auth_data.client_id,
+                      "client_secret": auth_data.client_secret,
                       # Scopes provide and limit permissions to what our app
                       # can access. It's important to use the most restricted
                       # scope that your app will need.
                       "scope": "bot"}
-        self.verification = os.environ.get("VERIFICATION_TOKEN")
+        self.verification = auth_data.signing_secret
 
         # NOTE: Python-slack requires a client connection to generate
         # an oauth token. We can connect to the client without authenticating
@@ -39,6 +45,8 @@ class Bot(object):
         # In a production environment you'll likely want to store this more
         # persistantly in  a database.
         self.messages = {}
+
+        print(self.oauth)
 
     def auth(self, code):
         """
@@ -72,7 +80,7 @@ class Bot(object):
         # bot token
         self.client = SlackClient(authed_teams[team_id]["bot_token"])
 
-    def no_grateful_dead(self, channel_id, text, ts):
+    def no_grateful_dead(self, link):
         """
         Create and send an onboarding welcome message to new users. Save the
         time stamp of this message on the message object for updating in the
@@ -80,15 +88,21 @@ class Bot(object):
 
         Parameters
         ----------
-        channel_id : str
-            id of the channel associated with the incoming event
-        text : str
-            text of the message from the incoming Slack event
-        ts : str
-            timestamp of the message
+        links : list of dicts
+            the links associated with the link share event
 
         """
         # We want to first check and see if the grateful dead and youtube are mentioned
+        res = requests.get(link)
+        soup = bs4.BeautifulSoup(res.text)
+
+        title_tag = soup.select('.watch-title')[0]['title']
+
+        if 'grateful' in title_tag.lower():
+
+
+
+
 
         
         post_message = self.client.api_call("chat.postMessage",
