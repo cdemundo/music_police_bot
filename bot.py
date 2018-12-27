@@ -3,12 +3,12 @@
 Python Slack Bot class for use with the pythOnBoarding app
 """
 import os
-#import message
 
 from slackclient import SlackClient
 from auth_data import AuthData
 
 import bs4
+import re
 import requests
 
 # To remember which teams have authorized your app and what tokens are
@@ -46,7 +46,11 @@ class Bot(object):
         # persistantly in  a database.
         self.messages = {}
 
-        print(self.oauth)
+        #get the token for the bot so we can actually get auth'd to do things
+        self.client.token = auth_data.bot_token
+
+
+
 
     def auth(self, code):
         """
@@ -80,11 +84,9 @@ class Bot(object):
         # bot token
         self.client = SlackClient(authed_teams[team_id]["bot_token"])
 
-    def no_grateful_dead(self, link):
+    def no_grateful_dead(self, link, channel):
         """
-        Create and send an onboarding welcome message to new users. Save the
-        time stamp of this message on the message object for updating in the
-        future.
+        Verify if a link includes the grateful dead and post a message warning everyone not to look at it, if so. 
 
         Parameters
         ----------
@@ -92,30 +94,23 @@ class Bot(object):
             the links associated with the link share event
 
         """
+        #the link has <> surrounding it, lets remove that
+        link = re.sub('[<>]', '', link)
+        #check if this
         # We want to first check and see if the grateful dead and youtube are mentioned
         res = requests.get(link)
-        soup = bs4.BeautifulSoup(res.text)
+        soup = bs4.BeautifulSoup(res.text, features="html.parser")
 
         title_tag = soup.select('.watch-title')[0]['title']
 
         if 'grateful' in title_tag.lower():
+            text = "WARNING!! ANDREW IS POSTING GRATEFUL DEAD AGAIN!!"        
+            post_message = self.client.api_call(method = "chat.postMessage",
+                                                channel=channel,
+                                                username=self.name,
+                                                icon_emoji=self.emoji,
+                                                text=text,
+                                                )
 
-
-
-
-
-        
-        post_message = self.client.api_call("chat.postMessage",
-                                            channel=message_obj.channel,
-                                            username=self.name,
-                                            icon_emoji=self.emoji,
-                                            text=message_obj.text,
-                                            attachments=message_obj.attachments
-                                            )
-        timestamp = post_message["ts"]
-        # We'll save the timestamp of the message we've just posted on the
-        # message object which we'll use to update the message after a user
-        # has completed an onboarding task.
-        message_obj.timestamp = timestamp
 
    

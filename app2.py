@@ -30,23 +30,24 @@ def _event_handler(event_type, slack_event):
         Response object with 200 - ok or 500 - No Event Handler error
 
     """
-    # ================ Team Join Events =============== #
-    # When the user first joins a team, the type of event will be team_join
-    if event_type == "link_shared":
-        print("LINK SHARE IDENTIFIED")
-        links = slack_event["event"]["links"]
+    if event_type == "message":
+        try:
+            link = slack_event["event"]["text"]
+            channel = slack_event["event"]["channel"]
+            #check if this is a link
+            if 'http' in link:
+                pyBot.no_grateful_dead(link = link, channel = channel)
+                return make_response("No Grateful Dead!", 200,)
+        except KeyError:
+            return make_response("No Grateful Dead!", 200,)
+    else:
+        # ============= Event Type Not Found! ============= #
+        # If the event_type does not have a handler
+        message = "You have not added an event handler for the %s" % event_type
+        # Return a helpful error message
+        return make_response(message, 500, {"X-Slack-No-Retry": 1})
 
-        for link in links:
-        	print(link['url'])
-        # Send the onboarding message
-        pyBot.no_grateful_dead(links = links)
-
-
-    # ============= Event Type Not Found! ============= #
-    # If the event_type does not have a handler
-    message = "You have not added an event handler for the %s" % event_type
-    # Return a helpful error message
-    return make_response(message, 200, {"X-Slack-No-Retry": 1})
+    return ''
 
 
 @app.route("/listening", methods=["GET", "POST"])
@@ -72,16 +73,13 @@ def hears():
     # signing secret in the request matches our app's settings
     if pyBot.verification != slack_event.get("token"):
         message = "Invalid Slack signing secret"
-        print("ISSUE WITH VERIFICATION TOKEN")
-        print(slack_event.get("token"))
         # By adding "X-Slack-No-Retry" : 1 to our response headers, we turn off
         # Slack's automatic retries during development.
-        make_response(message, 403, {"X-Slack-No-Retry": 1})
+        return make_response(message, 403, {"X-Slack-No-Retry": 1})
 
     # ====== Process Incoming Events from Slack ======= #
     # If the incoming request is an Event we've subcribed to
     if "event" in slack_event:
-        print("WE HAVE AN EVENT")
         event_type = slack_event["event"]["type"]
         # Then handle the event by event_type and have your bot respond
         return _event_handler(event_type, slack_event)
